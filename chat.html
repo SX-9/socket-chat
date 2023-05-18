@@ -1,0 +1,140 @@
+<!--
+    !! Note: Please Host This File Separately On This Machine !!
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SocketChat</title>
+    <style>
+        * {
+            color-scheme: dark;
+            font-family: monospace;
+            scroll-behavior: smooth;
+        }
+
+        a { color: white; }
+        h1 { margin: .5em; }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #form {
+            position: fixed;
+            bottom: 1em;
+            left: 1em;
+            right: 1em;
+            height: 3em;
+            display: grid;
+            gap: 1em;
+            grid-template-columns: 1fr 5em;
+        }
+
+        #messages {
+            width: 35em;
+            max-width: 100%;
+            overflow-x: hidden;
+            margin-bottom: 5em;
+        }
+
+        .message { padding: .2em; }
+        .message:nth-child(odd) { background-color: #4d4d4d; }
+        .message:nth-child(even) { background-color: #353535; }
+    </style>
+</head>
+<body>
+    <h1><a href="https://github.com/SX-9/socket-chat">SocketChat</a></h1>
+    <p>
+        Username: <span id="username"></span> (<span id="id"></span>)
+        <br>Room: <span id="roomed"></span>
+    </p>
+    <div id="messages"></div>
+    <form id="form">
+        <input type="text" id="message" placeholder="Type Message Here" autocomplete="off" autofocus>
+        <button type="submit">Send</button>
+    </form>
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js" integrity="sha384-c79GN5VsunZvi+Q/WObgk2in0CbZsHnjEqvFxC5DxHn9lTfNce2WW6h2pH6u/kF+" crossorigin="anonymous"></script>
+    <script>
+        const params = new URLSearchParams(location.search);
+        const room = params.get('room') || prompt('Enter Room Id To Join:', 'default') || 'default';
+        const user = params.get('username') || prompt('Enter Username:');
+        const socket = io({ closeOnBeforeunload: false });
+        let silent = 0;
+
+        socket.onAny(console.log)
+
+        socket.on('connect', () => {
+            username.innerText = user;
+            roomed.innerText = room;
+            id.innerText = socket.id;
+            socket.emit('join', {
+                name: user || socket.id,
+                room,
+            });
+        });
+
+        socket.onAny((event, data) => {
+            if (data.room !== room) return;
+            displayMsg({
+                ...data,
+                type: event,
+            });
+            window.scrollTo(0, document.body.scrollHeight);
+        });
+
+        form.onsubmit = (e) => {
+            e.preventDefault();
+
+            if (silent) return;
+            silent++;
+            setTimeout(() => silent--, 1000);
+            
+            let msg = message.value;
+            if (msg.length <= 0) return;
+
+            socket.emit('message', {
+                room,
+                value: msg,
+                name: user || socket.id,
+            });
+            message.value = '';
+        };
+
+        window.onbeforeunload = (e) => {
+            e.preventDefault();
+            e.returnValue = " ";
+            socket.emit('leave', {
+                name: user || socket.id,
+                room,
+            });
+        };
+
+        function displayMsg(data) {
+            let div = document.createElement('div');
+            let n = data.name === name ? 'You' : data.name;
+
+            div.classList.add('message');
+            switch (data.type) {
+                case 'join':
+                    div.innerHTML = `${n} Joined The Room!`;
+                    div.style.color = '#99f492';
+                    break;
+                case 'leave':
+                    div.innerHTML = `${n} Left The Room!`;
+                    div.style.color = '#f49492';
+                    break;
+                case 'message':
+                    div.innerText = `${n}: ${data.value}`;
+                    break;
+            }
+            messages.appendChild(div);
+        }
+    </script>
+</body>
+</html>
