@@ -33,5 +33,5 @@ io.on("connection", (socket) => {
 // });
 
 http.listen(3000, () => console.log(
-	`Starting On Port 3000, Please Host The 'index.html' File Separately But On This Machine!`
+	`Starting On Port 3000`
 ));
